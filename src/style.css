@@ -1,0 +1,28 @@
+:root {
+  font-family: Arial;
+}
+
+#app {
+  background-color: #555;
+  color: white;
+}
+
+.container {
+  display: grid;
+  grid-template-columns: auto 200px;
+}
+
+.canvas-container {
+  
+}
+
+.main-canvas {
+  z-index: 1;
+  position: absolute;
+  width: auto;
+}
+
+.grid-canvas {
+  position: absolute;
+  z-index: 0;
+}
