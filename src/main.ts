@@ -1,3 +1,9 @@
+import type { Position, State, Tool } from '../types';
+import search from './lib/bfs';
+import run from './loop';
+import player from './player';
+import getRenderer, { buildRenderer } from './renderer';
+import buildState, { buildState2, type State2 } from './state';
 import './style.css'
 
 function main() {
@@ -46,10 +52,14 @@ function main() {
   if (!ctx) return
   if (!grid_ctx) return
 
-  const stateController = buildState();
-  const renderer = canvasControl(ctx, { SIZE, COUNT }, stateController.getState());
+  // const stateController = buildState(COUNT);
+  // const renderer = getRenderer(ctx, { SIZE, COUNT }, stateController.getState());
 
-  const { onWidthChange, init, getWidth } = handleWidth(canvasContainer);
+  const renderer = buildRenderer(ctx, SIZE, COUNT);
+  const stateController = buildState2(COUNT);
+
+
+  const { onWidthChange, getWidth, ...widthCtrl } = handleWidth(canvasContainer);
 
   onWidthChange(draw_grid)
 
@@ -71,47 +81,90 @@ function main() {
     canvas.width = width;
     canvas.height = width;
     renderer.setWidth(width);
-    renderer.draw(stateController.getState());
+    // renderer.draw(stateController.getState());
   })
 
-  init();
-
-
+  widthCtrl.init();
 
   const resetButton = document.createElement("button");
   controlsContainer.appendChild(resetButton);
   resetButton.innerText = "Reset";
   resetButton.addEventListener("click", () => {
-    stateController.reset();
-    renderer.reset();
+    // stateController.reset();
+    // renderer.reset();
   })
 
+  const solveButton = document.createElement("button");
+  controlsContainer.appendChild(solveButton);
+  solveButton.innerText = "Solve";
+  solveButton.addEventListener("click", () => {
+    const solution = solveMaze(stateController.getState(), COUNT);
 
+    if (!solution) return;
 
-  function mouseHandler() {
-    let position = { x: 0, y: 0 }
+    stateController.setSolution(solution.result);
+  })
 
-    const onChangeFuncs: { (p: typeof position): void }[] = [];
+  const playSolveButton = document.createElement("button");
+  controlsContainer.appendChild(playSolveButton);
+  playSolveButton.innerText = "Play Solution";
 
-    function onChange(func: (p: typeof position) => void) {
-      onChangeFuncs.push(func)
+  const pauseButton = document.createElement("button");
+  controlsContainer.appendChild(pauseButton);
+  pauseButton.innerText = "Pause";
+
+  const playerControl = player(() => { console.log("this is playing!") }, 20);
+
+  function resultSequence(solution: ReturnType<typeof search>) {
+    let i = 0;
+
+    return () => {
+      if (!solution) return;
+      const s = solution as ReturnType<typeof search>
+
+      const len = s.tested_paths_sequence.length;
+      if (i > len - 1) {
+        if (i > len + 5) {
+          i = 0;
+          return;
+        }
+        stateController.setSolution(s.result);
+        playerControl.pause();
+      } else {
+        const path = s.tested_paths_sequence[i];
+        stateController.setSolution(path);
+      }
+
+      i++;
     }
-
-    function setPosition(mouse_x: number, mouse_y: number) {
-      position.x =
-        mouse_x; position.y = mouse_y;
-
-      onChangeFuncs.forEach(f => f(position));
-    }
-
-    return { position, setPosition, onChange }
   }
+
+
+  playSolveButton.addEventListener("click", () => {
+    const solution = solveMaze(stateController.getState(), COUNT);
+
+    if (!solution) return;
+
+    const sequenceThing = resultSequence(solution);
+    playerControl.setCb(sequenceThing)
+
+    playerControl.play();
+  })
+
+  pauseButton.addEventListener("click", () => {
+    if (pauseButton.innerText == "Continue") {
+      playerControl.play();
+      pauseButton.innerText = "Pause";
+    } else {
+      playerControl.pause();
+      pauseButton.innerText = "Continue";
+    }
+  })
 
   canvas.addEventListener("mousemove", (e) => {
     const { mouse_x, mouse_y } = getCanvasMousePosition(e);
 
     stateController.setMouseCoordinates({ x: mouse_x, y: mouse_y })
-    renderer.draw(stateController.getState());
   })
 
   canvas.addEventListener("contextmenu", (e) => {
@@ -121,57 +174,74 @@ function main() {
 
   canvas.addEventListener("mousedown", (e) => {
     stateController.setPressed(e.button == 2 ? "right" : "left");
-    renderer.draw(stateController.getState());
+  })
+
+  window.addEventListener("keypress", (e) => {
+    const tools: Tool[] = ["wall", "start", "end"];
+    console.log(e.key)
+    if (e.key === "e") {
+      e.preventDefault();
+
+      const currentTool = stateController.getState().tool;
+      const i = tools.findIndex(t => t === currentTool);
+      if (i === -1) return;
+
+      console.log(i);
+
+      let new_tool: Tool = "wall";
+      if (i === tools.length - 1) {
+        new_tool = tools[0]
+      } else {
+        new_tool = tools[i + 1]
+      }
+
+      stateController.setTool(new_tool);
+    }
   })
 
   window.addEventListener("mouseup", () => {
     stateController.setPressed(null);
-    renderer.draw(stateController.getState());
   })
 
   function getCanvasMousePosition(e: MouseEvent) {
     const mouse_x_raw = e.offsetX;
     const mouse_y_raw = e.offsetY;
-    const width = canvas.width;
-    const mouse_x = Math.floor((mouse_x_raw / getWidth(canvasContainer.clientWidth)) * COUNT);
-    const mouse_y = Math.floor((mouse_y_raw / getWidth(canvasContainer.clientWidth)) * COUNT);
+    const mouse_x = Math.floor((mouse_x_raw / getWidth()) * COUNT);
+    const mouse_y = Math.floor((mouse_y_raw / getWidth()) * COUNT);
     return { mouse_x, mouse_y }
   }
 
-  stateController.onChange(state => {
-    const bt = state.mouseButton;
-    const { x, y } = state.mouseCoordinates;
+  run(renderer.render, stateController.getState)
 
-    if (bt === "left") {
-      // paint mode
-      const r = state.rects.find(r => r.position.x === x && r.position.y === y);
-      if (r) return;
-      stateController.addRect({
-        colour: "pink",
-        position: { x, y },
-        size: { width: 1, height: 1 }
-      });
-    } else if (bt === "right") {
-      stateController.deleteRect(state.mouseCoordinates);
-    }
-  })
+
+  // search()
 
   // DEBUG
 
   const infoBox = document.createElement("div");
+  const p1 = document.createElement("p");
+  const p2 = document.createElement("p");
+
   infoBox.style.position = "fixed";
   infoBox.style.bottom = "0";
   infoBox.style.right = "0";
-  infoBox.innerText = "";
+  p1.innerText = "";
+  p2.innerText = "";
 
-  stateController.onChange(state => {
-    infoBox.innerText = state.mouseButton ? state.mouseButton : "Not pressed"
-  })
+  infoBox.appendChild(p1);
+  infoBox.appendChild(p2);
 
-  document.body.appendChild(infoBox)
+  // stateController.onChange(state => {
+  //   p1.innerText = state.mouseButton ? state.mouseButton : "Not pressed"
+  //   p2.innerText = state.tool;
+  // })
 
-  const bt = stateController.getState().mouseButton;
-  infoBox.innerText = bt ? bt : "Not pressed";
+  // document.body.appendChild(infoBox)
+  // const state = stateController.getState();
+  // const bt = state.mouseButton;
+  // p1.innerText = bt ? bt : "Not pressed";
+  // p2.innerText = state.tool;
+
 }
 
 
@@ -180,147 +250,10 @@ document.addEventListener("DOMContentLoaded", () => {
   main();
 })
 
-type Params = { x: number, y: number, w: number, h: number }
-
-type Square = { x: number, y: number }
-
-type MouseHandler = {
-  position: { x: number, y: number }, setPosition:
-  (mouse_x: number, mouse_y: number) => void, onChange: (func: (p: {
-    x: number,
-    y: number
-  }) => void) => void
-}
-
-function canvasControl(ctx: CanvasRenderingContext2D, size: { SIZE: number, COUNT: number }, state: State) {
-  let { SIZE, COUNT
-  } = size;
-
-
-  function draw(state: State) {
-    // console.log(state);
-    ctx.reset();
-
-    console.log("render!", state)
-
-    const gap = Math.round(SIZE / COUNT);
-
-    for (let i = 0; i < state.rects.length; i++) {
-      const r = state.rects[i];
-      // console.log("Rendering rect", r);
-      ctx.fillStyle = "blue";
-      ctx.fillRect(r.position.x * gap, r.position.y * gap, r.size.width * gap, r.size.height * gap);
-    }
-
-    if (state.mouseCoordinates.x >= 0 && state.mouseCoordinates.y >= 0) {
-      const { x, y } = state.mouseCoordinates;
-      ctx.fillStyle = "rgba(50,50,150,0.5)";
-      ctx.fillRect(x * gap, y * gap, gap, gap)
-    }
-  }
-
-  draw(state);
-
-  return {
-    draw,
-    setWidth: (w: number) => { SIZE = w },
-    reset: () => ctx.reset()
-  };
-}
-
 
 
 // some state object which is passed to draw(state: State) the state object can
 // be manipulated by multiple things before redraw
-
-type Position = { x: number, y: number }
-
-type Rect = {
-  position: Position, size: { width: number, height: number },
-  colour: string
-}
-
-type State = {
-  rects: Rect[],
-
-  // mouse
-  mouseCoordinates: Position,
-  mouseButton: MouseButton
-}
-
-type MouseButton = null | "left" | "right"
-
-type StateController = {
-  getState: () => State,
-  setMouseCoordinates: (crd: Position) => void
-  addRect: (rect: Rect) => void
-  deleteRect: (position: Position) => void
-  setPressed: (buttonState: MouseButton) => void
-  onChange: (fn: (state: State) => void) => void
-  reset: () => void
-}
-
-function buildState(): StateController {
-  const initialState: State = {
-    rects: [],
-    mouseButton: null,
-    mouseCoordinates: {
-      x: -1,
-      y: -1
-    }
-  }
-  let state: State = initialState;
-  const onChangeFuncs: { (state: State): void }[] = [];
-
-  function changed() {
-    onChangeFuncs.forEach(f => f(state));
-  }
-
-  function addRect(rect: Rect) {
-    state = {
-      ...state, rects: [...state.rects,
-        rect]
-    }
-    changed();
-  }
-
-  function deleteRect(position: Position) {
-    const newRects = state.rects.filter(r => r.position.x !== position.x || r.position.y !== position.y);
-    state = {
-      ...state,
-      rects: newRects
-    }
-    changed();
-  }
-
-  function setPressed(buttonState: MouseButton) {
-    state = {
-      ...state,
-      mouseButton: buttonState
-    }
-    changed();
-  }
-
-  function setMouseCoordinates(crd: Position) {
-    state = {
-      ...state,
-      mouseCoordinates: crd
-    }
-    changed();
-  }
-
-  return {
-    getState: () => state,
-    deleteRect,
-    addRect,
-    setPressed,
-    setMouseCoordinates,
-    onChange: (fn: (state: State) => void) => {
-      onChangeFuncs.push(fn);
-    },
-    reset: () => { state = initialState }
-  }
-}
 
 function handleWidth(divToMeasure: HTMLElement) {
   let width = 0;
@@ -346,4 +279,33 @@ function handleWidth(divToMeasure: HTMLElement) {
     init: updateWidth,
     getWidth: () => width
   }
+}
+
+function convertToStringArr(walls: boolean[][]): string[] {
+  return walls.map(row => row.map(r => {
+    if (r) return "#";
+    return " "
+  }).join(""));
+}
+
+function createStringMaze(walls: Position[], width: number): string[] {
+  const arr = Array.from(Array(width));
+  let boolArr = arr.map(_ => arr.map(_ => false));
+  for (let i = 0; i < walls.length; i++) {
+    const { x, y } = walls[i];
+    if (x >= width || x < 0 || y >= width || y < 0) continue;
+    console.log(x, y, width)
+    boolArr[y][x] = true;
+  }
+
+  return convertToStringArr(boolArr)
+}
+
+function solveMaze(state: State2, dim: number) {
+  if (!state.start || !state.end) return undefined;
+
+
+  const maze = createStringMaze(state.walls, dim)
+  const solution = search(maze, state.start, state.end);
+  return solution
 }
