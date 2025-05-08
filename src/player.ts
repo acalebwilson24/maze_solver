@@ -3,7 +3,7 @@ export default function player(cb: () => void, _interval?: number) {
         let fn: { (): void } | undefined = undefined;
         const interval = setInterval(() => {
                 fn && fn();
-        }, 20);
+        }, _interval ?? 20);
 
         function play() {
                 fn = _cb;

@@ -19,7 +19,10 @@ export type StateController2 = {
         setPressed: (buttonState: MouseButton) => void
         setTool: (tool: Tool) => void
         setSolution: (solution?: Position[]) => void
-        getState: () => State2
+        getState: () => State2,
+        fill: () => void,
+        clear: () => void
+        setSeen: (seen: Position[]) => void
 }
 
 export type State2 = {
@@ -28,6 +31,7 @@ export type State2 = {
         mouseCoordinates?: Position,
         tool: Tool,
         solution?: Position[]
+        seen?: Position[]
         start?: Position,
         end?: Position
 }
@@ -100,6 +104,28 @@ export function buildState2(count: number): StateController2 {
                 state.end = p;
         }
 
+        let fill_rects: Position[] = [];
+
+        function fill() {
+                const rects: Position[] = fill_rects;
+                if (rects.length) {
+                        state.walls = rects;
+                        return
+                }
+
+                for (let y = 0; y < count; y++) {
+                        for (let x = 0; x < count; x++) {
+                                rects.push({ x, y });
+                        }
+                }
+                state.walls = rects;
+                fill_rects = rects.map(r => ({ ...r }));
+        }
+
+        function clear() {
+                state.walls = [];
+        }
+
         function setMouseCoordinates(p?: Position) {
                 state.mouseCoordinates = p;
                 setState(state);
@@ -120,12 +146,20 @@ export function buildState2(count: number): StateController2 {
                 setState(state);
         }
 
+        function setSeen(seen?: Position[]) {
+                state.seen = seen;
+                setState(state);
+        }
+
         return {
                 setMouseCoordinates,
                 setTool,
                 setPressed,
                 setSolution,
-                getState: () => state
+                setSeen,
+                getState: () => state,
+                fill,
+                clear
         }
 }
 

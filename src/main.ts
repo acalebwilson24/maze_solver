@@ -1,5 +1,6 @@
 import type { Position, State, Tool } from '../types';
 import search from './lib/bfs';
+import dfs_solve from './lib/dfs';
 import run from './loop';
 import player from './player';
 import getRenderer, { buildRenderer } from './renderer';
@@ -30,7 +31,7 @@ function main() {
   grid_canvas.classList.add("grid-canvas")
 
   const SIZE = 1000;
-  const COUNT = 25;
+  const COUNT = 50;
 
   canvas.width = SIZE;
   canvas.height = SIZE;
@@ -113,26 +114,33 @@ function main() {
   controlsContainer.appendChild(pauseButton);
   pauseButton.innerText = "Pause";
 
+  const playDFSButton = document.createElement("button");
+  controlsContainer.appendChild(playDFSButton);
+  playDFSButton.innerText = "Play DFS";
+
   const playerControl = player(() => { console.log("this is playing!") }, 20);
 
-  function resultSequence(solution: ReturnType<typeof search>) {
+  function resultSequence(result: Position[], sequence: Position[][], seen_sequence?: Position[][], hide_path = false) {
     let i = 0;
 
     return () => {
-      if (!solution) return;
-      const s = solution as ReturnType<typeof search>
 
-      const len = s.tested_paths_sequence.length;
+      const len = sequence.length;
       if (i > len - 1) {
         if (i > len + 5) {
           i = 0;
           return;
         }
-        stateController.setSolution(s.result);
+        stateController.setSolution(result);
         playerControl.pause();
       } else {
-        const path = s.tested_paths_sequence[i];
-        stateController.setSolution(path);
+        const path = sequence[i];
+        if (!hide_path) {
+          stateController.setSolution(path);
+        }
+        if (seen_sequence && seen_sequence.length > i) {
+          stateController.setSeen(seen_sequence[i])
+        }
       }
 
       i++;
@@ -143,9 +151,22 @@ function main() {
   playSolveButton.addEventListener("click", () => {
     const solution = solveMaze(stateController.getState(), COUNT);
 
+    console.log(solution)
     if (!solution) return;
 
-    const sequenceThing = resultSequence(solution);
+    const sequenceThing = resultSequence(solution.result, solution.path_sequence, solution.seen_sequence, true);
+    playerControl.setCb(sequenceThing)
+
+    playerControl.play();
+  })
+
+  playDFSButton.addEventListener("click", () => {
+    const solution = solveMazeDFS(stateController.getState(), COUNT);
+
+    console.log(solution);
+    if (!solution) return;
+
+    const sequenceThing = resultSequence(solution.result, solution.paths_travelled, solution.seen_sequence);
     playerControl.setCb(sequenceThing)
 
     playerControl.play();
@@ -159,6 +180,14 @@ function main() {
       playerControl.pause();
       pauseButton.innerText = "Continue";
     }
+  })
+
+  const fillButton = document.createElement("button");
+  controlsContainer.appendChild(fillButton);
+  fillButton.innerText = "Fill";
+
+  fillButton.addEventListener("click", () => {
+    stateController.fill();
   })
 
   canvas.addEventListener("mousemove", (e) => {
@@ -307,5 +336,14 @@ function solveMaze(state: State2, dim: number) {
 
   const maze = createStringMaze(state.walls, dim)
   const solution = search(maze, state.start, state.end);
+  return solution
+}
+
+function solveMazeDFS(state: State2, dim: number) {
+  if (!state.start || !state.end) return undefined;
+
+
+  const maze = createStringMaze(state.walls, dim)
+  const solution = dfs_solve(maze, "#", state.start, state.end);
   return solution
 }

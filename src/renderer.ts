@@ -40,9 +40,17 @@ export function buildRenderer(ctx: CanvasRenderingContext2D, initial_width: numb
 
                 drawRect(tile_width, state.mouseCoordinates, hoverStyles[state.tool]);
 
+                if (state.seen) {
+                        for (let i = 0; i < state.seen.length; i++) {
+                                drawRect(tile_width, state.seen[i], `rgba(255,128,255,0.3)`);
+                        }
+
+                }
+
                 if (state.solution) {
                         for (let i = 0; i < state.solution.length; i++) {
-                                drawRect(tile_width, state.solution[i], "rgba(255,255,255,0.5)");
+                                const opacity = i === state.solution.length - 1 ? 1.0 : 0.5;
+                                drawRect(tile_width, state.solution[i], `rgba(255,255,255,${opacity})`);
                         }
                 }
         }
