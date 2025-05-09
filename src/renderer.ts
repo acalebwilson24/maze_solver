@@ -1,9 +1,9 @@
 import type { Position, State } from "../types"
-import type { State2 } from "./state";
+import type { State } from "./state";
 
 export function buildRenderer(ctx: CanvasRenderingContext2D, initial_width: number, rows: number) {
         let width = initial_width;
-        let stored_state: State2 | undefined = undefined;
+        let stored_state: State | undefined = undefined;
 
         const hoverStyles = {
                 "wall": "rgba(50, 50, 150, 0.3)",
@@ -23,7 +23,7 @@ export function buildRenderer(ctx: CanvasRenderingContext2D, initial_width: numb
                 ctx.fillRect(coords.x * w, coords.y * w, w, w);
         }
 
-        function render(state: State2) {
+        function render(state: State) {
                 stored_state = state;
                 ctx.reset();
 
@@ -49,7 +49,7 @@ export function buildRenderer(ctx: CanvasRenderingContext2D, initial_width: numb
 
                 if (state.solution) {
                         for (let i = 0; i < state.solution.length; i++) {
-                                const opacity = i === state.solution.length - 1 ? 1.0 : 0.5;
+                                const opacity = i === state.solution.length - 1 ? 1.0 : 0.3;
                                 drawRect(tile_width, state.solution[i], `rgba(255,255,255,${opacity})`);
                         }
                 }

@@ -1,20 +1,33 @@
 :root {
   font-family: Arial;
   font-size: 1rem;
-  --input-background: rgb(180, 180, 180);
+  --input-background: #616167;
+  color: white;
+}
+
+body {
+  min-height: 100dvh;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #28282b;
 }
 
 #app {
-  background-color: #555;
-  color: white;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 .container {
   display: grid;
-  grid-template-columns: auto 200px;
+  grid-template-columns: auto 250px;
+  background-color: #454549;
 }
 
-.canvas-container {}
+.canvas-container {
+  color: white;
+}
 
 .main-canvas {
   z-index: 1;
@@ -23,6 +36,8 @@
 }
 
 .grid-canvas {
+
+  background-color: #616167;
   position: absolute;
   z-index: 0;
 }
@@ -31,10 +46,16 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  padding: 1rem;
+  padding: 2rem;
 }
 
 .solve-buttons-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.horizontal-buttons-container {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.5rem;
@@ -60,7 +81,7 @@ button:hover {
 
 button.active {
   background-color: #37376d;
-  color: white;
+  color: #c3c3c5;
   box-shadow: 2px 2px 0px black;
   transform: translate(-1px, -1px);
 }

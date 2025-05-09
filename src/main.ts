@@ -67,7 +67,8 @@ function main() {
   onWidthChange(draw_grid)
 
   function draw_grid(width: number) {
-    canvasContainer.style.minHeight = width + "px"
+    canvasContainer.style.height = width + "px"
+    canvasContainer.style.width = width + "px"
     grid_canvas.width = width;
     grid_canvas.height = width;
     const gap = Math.round(width / COUNT)
@@ -95,8 +96,12 @@ function main() {
   widthCtrl.init();
 
   const solveButtonsContainer = document.createElement("div");
-  solveButtonsContainer.classList.add("solve-buttons-container");
+  solveButtonsContainer.classList.add("horizontal-buttons-container");
   controlsContainer.appendChild(solveButtonsContainer);
+
+  const playerButtons = document.createElement("div");
+  playerButtons.classList.add("horizontal-buttons-container");
+  controlsContainer.appendChild(playerButtons);
 
   const breadthSolveButton = document.createElement("button");
   solveButtonsContainer.appendChild(breadthSolveButton);
@@ -107,7 +112,7 @@ function main() {
   playDFSButton.innerText = "Depth Solve";
 
   const pauseButton = document.createElement("button");
-  controlsContainer.appendChild(pauseButton);
+  playerButtons.appendChild(pauseButton);
   pauseButton.innerText = "Pause";
 
   const playerControl = player();
@@ -130,11 +135,14 @@ function main() {
     }
   })
 
-
-
   sliderLabel.appendChild(slider);
   controlsContainer.appendChild(sliderLabel);
 
+  function clearSolution() {
+    playerControl.stop();
+    fullState.setSolution([]);
+    fullState.setSeen([]);
+  }
 
   function resultSequence(result: Position[], sequence: Position[][], seen_sequence?: Position[][], hide_path = false) {
     let i = 0;
@@ -165,6 +173,7 @@ function main() {
 
 
   breadthSolveButton.addEventListener("click", () => {
+    clearSolution()
     const solution = solveMaze(fullState.getState(), COUNT);
 
     console.log(solution)
@@ -177,6 +186,7 @@ function main() {
   })
 
   playDFSButton.addEventListener("click", () => {
+    clearSolution();
     const solution = solveMazeDFS(fullState.getState(), COUNT);
 
     console.log(solution);
@@ -215,6 +225,28 @@ function main() {
   })
 
   playerControl.onChange(handlePlayState);
+
+  const clearButton = document.createElement("button");
+  clearButton.innerText = "Clear";
+
+  function updateClearButton(state: PlayState) {
+    if (state === "playing") {
+      clearButton.setAttribute("disabled", "true");
+    } else {
+      clearButton.removeAttribute("disabled");
+    }
+  }
+
+  updateClearButton(playerControl.getPlayState());
+
+  playerControl.onChange(updateClearButton);
+
+  clearButton.addEventListener("click", () => {
+    playerControl.stop();
+    clearSolution();
+  })
+
+  playerButtons.appendChild(clearButton);
 
   const fillButton = document.createElement("button");
   controlsContainer.appendChild(fillButton);
@@ -326,7 +358,7 @@ function handleWidth(divToMeasure: HTMLElement) {
   window.addEventListener("resize", updateWidth)
 
   function updateWidth() {
-    const new_width = breaks.find(b => divToMeasure.clientWidth > b) ?? 400;
+    const new_width = breaks.find(b => window.innerWidth - 100 - 250 > b) ?? 400;
     if (new_width !== width) {
       width = new_width;
       onChangeFuncs.forEach(fn => fn(width));
