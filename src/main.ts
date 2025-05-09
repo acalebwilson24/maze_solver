@@ -352,13 +352,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function handleWidth(divToMeasure: HTMLElement) {
   let width = 0;
-  let breaks = [1000, 800, 600, 400]
+  let breaks = [1600, 1400, 1200, 1000, 800, 600, 400]
   const onChangeFuncs: { (w: number): void }[] = [];
 
   window.addEventListener("resize", updateWidth)
 
   function updateWidth() {
-    const new_width = breaks.find(b => window.innerWidth - 100 - 250 > b) ?? 400;
+    const max_width = window.innerWidth - 100 - 250;
+    const max_height = window.innerHeight - 100;
+
+    let new_width: number = 0;
+    if (max_width > max_height) {
+      new_width = breaks.find(b => max_height > b) ?? 400;
+    } else {
+      new_width = breaks.find(b => max_width > b) ?? 400;
+    }
+
     if (new_width !== width) {
       width = new_width;
       onChangeFuncs.forEach(fn => fn(width));
