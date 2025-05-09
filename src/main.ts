@@ -1,10 +1,10 @@
-import type { Position, State, Tool } from '../types';
+import type { Position, Tool, State } from '../types';
 import search from './lib/bfs';
 import dfs_solve from './lib/dfs';
 import run from './loop';
-import player from './player';
-import getRenderer, { buildRenderer } from './renderer';
-import buildState, { buildState2, type State2 } from './state';
+import player, { type PlayState } from './player';
+import { buildRenderer } from './renderer';
+import { buildFullState, buildInputState } from './state';
 import './style.css'
 
 function main() {
@@ -31,7 +31,7 @@ function main() {
   grid_canvas.classList.add("grid-canvas")
 
   const SIZE = 1000;
-  const COUNT = 50;
+  const COUNT = 25;
 
   canvas.width = SIZE;
   canvas.height = SIZE;
@@ -45,7 +45,7 @@ function main() {
   canvasContainer.appendChild(grid_canvas);
   canvasContainer.appendChild(canvas);
 
-  canvas.style.border = "1px solid black";
+  // canvas.style.border = "1px solid black";
 
   const grid_ctx = grid_canvas.getContext("2d")
   const ctx = canvas.getContext("2d");
@@ -57,8 +57,10 @@ function main() {
   // const renderer = getRenderer(ctx, { SIZE, COUNT }, stateController.getState());
 
   const renderer = buildRenderer(ctx, SIZE, COUNT);
-  const stateController = buildState2(COUNT);
+  const inputState = buildInputState();
+  const fullState = buildFullState(COUNT);
 
+  inputState.onChange(state => fullState.setInputState(state));
 
   const { onWidthChange, getWidth, ...widthCtrl } = handleWidth(canvasContainer);
 
@@ -70,11 +72,16 @@ function main() {
     grid_canvas.height = width;
     const gap = Math.round(width / COUNT)
     if (!grid_ctx) return
-    for (let i = gap; i < width; i += gap) {
-      grid_ctx.moveTo(0, i); grid_ctx.lineTo(width,
-        i); grid_ctx.stroke();
+    for (let i = gap; i <= width; i += gap) {
+      grid_ctx.strokeStyle = "rgb(70,70,70)";
+      const offset = i === width ? i - 1 : i;
+      grid_ctx.moveTo(0, offset);
+      grid_ctx.lineTo(width, offset);
+      grid_ctx.stroke();
 
-      grid_ctx.moveTo(i, 0); grid_ctx.lineTo(i, width); grid_ctx.stroke();
+      grid_ctx.moveTo(offset, 0);
+      grid_ctx.lineTo(offset, width);
+      grid_ctx.stroke();
     }
   }
 
@@ -87,38 +94,47 @@ function main() {
 
   widthCtrl.init();
 
-  const resetButton = document.createElement("button");
-  controlsContainer.appendChild(resetButton);
-  resetButton.innerText = "Reset";
-  resetButton.addEventListener("click", () => {
-    // stateController.reset();
-    // renderer.reset();
-  })
+  const solveButtonsContainer = document.createElement("div");
+  solveButtonsContainer.classList.add("solve-buttons-container");
+  controlsContainer.appendChild(solveButtonsContainer);
 
-  const solveButton = document.createElement("button");
-  controlsContainer.appendChild(solveButton);
-  solveButton.innerText = "Solve";
-  solveButton.addEventListener("click", () => {
-    const solution = solveMaze(stateController.getState(), COUNT);
+  const breadthSolveButton = document.createElement("button");
+  solveButtonsContainer.appendChild(breadthSolveButton);
+  breadthSolveButton.innerText = "Breath Solve";
 
-    if (!solution) return;
-
-    stateController.setSolution(solution.result);
-  })
-
-  const playSolveButton = document.createElement("button");
-  controlsContainer.appendChild(playSolveButton);
-  playSolveButton.innerText = "Play Solution";
+  const playDFSButton = document.createElement("button");
+  solveButtonsContainer.appendChild(playDFSButton);
+  playDFSButton.innerText = "Depth Solve";
 
   const pauseButton = document.createElement("button");
   controlsContainer.appendChild(pauseButton);
   pauseButton.innerText = "Pause";
 
-  const playDFSButton = document.createElement("button");
-  controlsContainer.appendChild(playDFSButton);
-  playDFSButton.innerText = "Play DFS";
+  const playerControl = player();
+  playerControl.setSpeed(100);
 
-  const playerControl = player(() => { console.log("this is playing!") }, 20);
+  const sliderLabel = document.createElement("label");
+  const sliderLabelSpan = document.createElement("span");
+  sliderLabelSpan.innerText = "Speed";
+  sliderLabel.appendChild(sliderLabelSpan);
+
+  const slider = document.createElement("input");
+  slider.type = "range";
+  slider.min = "1";
+  slider.max = "50";
+  slider.value = "5";
+  slider.addEventListener("change", (e) => {
+    const v = (e.currentTarget as HTMLInputElement).valueAsNumber;
+    if (v) {
+      playerControl.setSpeed(200 / v);
+    }
+  })
+
+
+
+  sliderLabel.appendChild(slider);
+  controlsContainer.appendChild(sliderLabel);
+
 
   function resultSequence(result: Position[], sequence: Position[][], seen_sequence?: Position[][], hide_path = false) {
     let i = 0;
@@ -131,15 +147,15 @@ function main() {
           i = 0;
           return;
         }
-        stateController.setSolution(result);
-        playerControl.pause();
+        fullState.setSolution(result);
+        playerControl.stop();
       } else {
         const path = sequence[i];
         if (!hide_path) {
-          stateController.setSolution(path);
+          fullState.setSolution(path);
         }
         if (seen_sequence && seen_sequence.length > i) {
-          stateController.setSeen(seen_sequence[i])
+          fullState.setSeen(seen_sequence[i])
         }
       }
 
@@ -148,52 +164,70 @@ function main() {
   }
 
 
-  playSolveButton.addEventListener("click", () => {
-    const solution = solveMaze(stateController.getState(), COUNT);
+  breadthSolveButton.addEventListener("click", () => {
+    const solution = solveMaze(fullState.getState(), COUNT);
 
     console.log(solution)
     if (!solution) return;
 
     const sequenceThing = resultSequence(solution.result, solution.path_sequence, solution.seen_sequence, true);
-    playerControl.setCb(sequenceThing)
+    playerControl.setFn(sequenceThing)
 
     playerControl.play();
   })
 
   playDFSButton.addEventListener("click", () => {
-    const solution = solveMazeDFS(stateController.getState(), COUNT);
+    const solution = solveMazeDFS(fullState.getState(), COUNT);
 
     console.log(solution);
     if (!solution) return;
 
     const sequenceThing = resultSequence(solution.result, solution.paths_travelled, solution.seen_sequence);
-    playerControl.setCb(sequenceThing)
+    playerControl.setFn(sequenceThing)
 
     playerControl.play();
   })
 
-  pauseButton.addEventListener("click", () => {
-    if (pauseButton.innerText == "Continue") {
-      playerControl.play();
+  function handlePlayState(state: PlayState) {
+    if (state === "playing") {
+      pauseButton.classList.add("active");
+      pauseButton.removeAttribute("disabled");
       pauseButton.innerText = "Pause";
+    } else if (state === "stopped") {
+      pauseButton.classList.remove("active");
+      pauseButton.innerText = "Play";
+      pauseButton.setAttribute("disabled", "true");
     } else {
+      pauseButton.classList.remove("active");
+      pauseButton.innerText = "Play";
+      pauseButton.removeAttribute("disabled");
+    }
+  }
+
+  handlePlayState(playerControl.getPlayState());
+
+  pauseButton.addEventListener("click", () => {
+    if (playerControl.getPlayState() === "playing") {
       playerControl.pause();
-      pauseButton.innerText = "Continue";
+    } else {
+      playerControl.play();
     }
   })
+
+  playerControl.onChange(handlePlayState);
 
   const fillButton = document.createElement("button");
   controlsContainer.appendChild(fillButton);
   fillButton.innerText = "Fill";
 
   fillButton.addEventListener("click", () => {
-    stateController.fill();
+    fullState.fill();
   })
 
   canvas.addEventListener("mousemove", (e) => {
     const { mouse_x, mouse_y } = getCanvasMousePosition(e);
 
-    stateController.setMouseCoordinates({ x: mouse_x, y: mouse_y })
+    inputState.setMouseCoordinates({ x: mouse_x, y: mouse_y })
   })
 
   canvas.addEventListener("contextmenu", (e) => {
@@ -202,7 +236,7 @@ function main() {
 
 
   canvas.addEventListener("mousedown", (e) => {
-    stateController.setPressed(e.button == 2 ? "right" : "left");
+    inputState.setButton(e.button == 2 ? "right" : "left");
   })
 
   window.addEventListener("keypress", (e) => {
@@ -211,7 +245,7 @@ function main() {
     if (e.key === "e") {
       e.preventDefault();
 
-      const currentTool = stateController.getState().tool;
+      const currentTool = fullState.getState().tool;
       const i = tools.findIndex(t => t === currentTool);
       if (i === -1) return;
 
@@ -224,12 +258,12 @@ function main() {
         new_tool = tools[i + 1]
       }
 
-      stateController.setTool(new_tool);
+      inputState.setTool(new_tool);
     }
   })
 
   window.addEventListener("mouseup", () => {
-    stateController.setPressed(null);
+    inputState.setButton(null);
   })
 
   function getCanvasMousePosition(e: MouseEvent) {
@@ -240,7 +274,7 @@ function main() {
     return { mouse_x, mouse_y }
   }
 
-  run(renderer.render, stateController.getState)
+  run(renderer.render, fullState.getState)
 
 
   // search()
@@ -323,14 +357,13 @@ function createStringMaze(walls: Position[], width: number): string[] {
   for (let i = 0; i < walls.length; i++) {
     const { x, y } = walls[i];
     if (x >= width || x < 0 || y >= width || y < 0) continue;
-    console.log(x, y, width)
     boolArr[y][x] = true;
   }
 
   return convertToStringArr(boolArr)
 }
 
-function solveMaze(state: State2, dim: number) {
+function solveMaze(state: State, dim: number) {
   if (!state.start || !state.end) return undefined;
 
 
@@ -339,7 +372,7 @@ function solveMaze(state: State2, dim: number) {
   return solution
 }
 
-function solveMazeDFS(state: State2, dim: number) {
+function solveMazeDFS(state: State, dim: number) {
   if (!state.start || !state.end) return undefined;
 
 

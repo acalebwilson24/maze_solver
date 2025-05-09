@@ -1,5 +1,7 @@
 :root {
   font-family: Arial;
+  font-size: 1rem;
+  --input-background: rgb(180, 180, 180);
 }
 
 #app {
@@ -12,9 +14,7 @@
   grid-template-columns: auto 200px;
 }
 
-.canvas-container {
-  
-}
+.canvas-container {}
 
 .main-canvas {
   z-index: 1;
@@ -25,4 +25,190 @@
 .grid-canvas {
   position: absolute;
   z-index: 0;
+}
+
+.controls-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+}
+
+.solve-buttons-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+button {
+  padding: 0.4rem 0.2rem;
+  background-color: var(--input-background);
+  color: black;
+  box-shadow: 4px 4px 0px black;
+
+  margin: 4px 4px 0 0;
+  transform: translate(-2px, -2px);
+
+  border: 1px solid black;
+
+}
+
+button:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 2px 2px 0px black;
+}
+
+button.active {
+  background-color: #37376d;
+  color: white;
+  box-shadow: 2px 2px 0px black;
+  transform: translate(-1px, -1px);
+}
+
+button.active:hover {
+  background-color: #252547;
+}
+
+button.active:hover {}
+
+button[disabled] {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+label {
+  background-color: var(--input-background);
+  color: black;
+  padding: 0.5rem;
+
+  box-shadow: 4px 4px 0px black;
+  margin: 4px 4px 0 0;
+  border: 1px solid black;
+  transform: translate(-2px, -2px);
+}
+
+input[type=range] {
+  width: 100%;
+
+  --thumb-width: 10px;
+  --thumb-height: 20px;
+  --thumb-top-margin: -7px;
+  --track-height: 6.4px;
+  --track-fill: rgb(40, 40, 40);
+
+  background: var(--track-fill);
+}
+
+input[type=range] {
+  -webkit-appearance: none;
+  /* Hides the slider so that custom slider can be made */
+}
+
+
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+}
+
+input[type=range]:focus {
+  outline: none;
+  /* Removes the blue border. You should probably do some kind of focus styling for accessibility reasons though. */
+}
+
+input[type=range]::-ms-track {
+  width: 100%;
+  cursor: pointer;
+
+  /* Hides the slider so custom styles can be added */
+  background: transparent;
+  border-color: transparent;
+  color: transparent;
+}
+
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  border: 1px solid #000000;
+  height: var(--thumb-height);
+  width: var(--thumb-width);
+  border-radius: 3px;
+  background: #ffffff;
+  cursor: pointer;
+  margin-top: var(--thumb-top-margin);
+  /* You need to specify a margin in Chrome, but in Firefox and IE it is automatic */
+  box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d;
+  border-radius: 0;
+}
+
+/* All the same stuff for Firefox */
+input[type=range]::-moz-range-thumb {
+  box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d;
+  border: 1px solid #000000;
+  height: var(--thumb-height);
+  width: var(--thumb-width);
+  border-radius: 3px;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+/* All the same stuff for IE */
+input[type=range]::-ms-thumb {
+  box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d;
+  border: 1px solid #000000;
+  height: var(--thumb-height);
+  width: var(--thumb-width);
+  border-radius: 3px;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+input[type=range]::-webkit-slider-runnable-track {
+  width: 100%;
+  height: var(--track-height);
+  cursor: pointer;
+  box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d;
+  background: #3071a9;
+  border: 0.2px solid #010101;
+}
+
+input[type=range]:focus::-webkit-slider-runnable-track {
+  background: #367ebd;
+}
+
+input[type=range]::-moz-range-track {
+  width: 100%;
+  height: var(--track-height);
+  cursor: pointer;
+  box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d;
+  background: #3071a9;
+  border: 0.2px solid #010101;
+}
+
+input[type=range]::-ms-track {
+  width: 100%;
+  height: var(--track-height);
+  cursor: pointer;
+  background: transparent;
+  border-color: transparent;
+  border-width: 16px 0;
+  color: transparent;
+}
+
+input[type=range]::-ms-fill-lower {
+  background: var(--track-fill);
+  border: 0.2px solid #010101;
+  border-radius: 2.6px;
+  box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d;
+}
+
+input[type=range]:focus::-ms-fill-lower {
+  background: var(--track-fill);
+}
+
+input[type=range]::-ms-fill-upper {
+  background: var(--track-fill);
+  border: 0.2px solid #010101;
+  box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d;
+}
+
+input[type=range]:focus::-ms-fill-upper {
+  background: var(--track-fill);
 }

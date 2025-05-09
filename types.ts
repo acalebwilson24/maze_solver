@@ -5,21 +5,20 @@ export type Rect = {
         colour: string
 }
 
-export type State = {
-        wall_grid: boolean[][],
-        wall_arr: Position[]
+export type State = InputState & {
+        walls: Position[],
+        solution?: Position[]
+        seen?: Position[]
         start?: Position,
-        end?: Position,
-
-        // mouse
-        mouseCoordinates: Position,
-        mouseButton: MouseButton
-
-        // tool
-        tool: Tool
-
-        solution: Position[]
+        end?: Position
 }
+
+export type InputState = {
+        mouseButton: MouseButton,
+        mouseCoordinates?: Position,
+        tool: Tool,
+}
+
 
 export type Tool = "wall" | "start" | "end";
 
