@@ -1,3 +1,10 @@
 # Maze Solver
+Solves the maze you draw. Toggle wall/start/end with "e". Breadth and depth search + visualise.
 
-Solves the maze you draw. Toggle wall/start/end with "e".
+## Install
+`bun install` (or npm).
+
+## Run
+`bun run dev` 
+
+
